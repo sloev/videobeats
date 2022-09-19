@@ -1,35 +1,75 @@
 #include "ofApp.h"
 #include <chrono>
 
-
+const int width = 300;
+const int height = 250;
 //--------------------------------------------------------------
 void ofApp::setup()
 {
-    ofBackground(255, 255, 255);
+    ofSetBackgroundAuto(false);
+    ofBackground(0, 0, 0);
     ofSetVerticalSync(true);
-    frameByframe = false;
+    ofSetWindowTitle("videobeats");
+
+    oscPort.addListener(this, &ofApp::ChangedOSCPort);
+    syphonName.addListener(this, &ofApp::ChangedSyphonName);
 
     // Uncomment this to show movies with alpha channels
-    // fingerMovie.setPixelFormat(OF_PIXELS_RGBA);
-    mainOutputSyphonServer.setName("Screen Output");
-    tex.allocate(200, 100, GL_RGBA);
+    // player.setPixelFormat(OF_PIXELS_RGBA);
+    mainOutputSyphonServer.setName(syphonName.get());
 
-    fingerMovie.load("movies/onesecond.mp4");
-    fingerMovie.setLoopState(OF_LOOP_NORMAL);
-    fingerMovie.play();
     bpm = 60;
     int now = ofGetSystemTimeMillis();
     nextBeatMS = now + (60 * 1000 / bpm);
-    ofLog(OF_LOG_NOTICE, "now is " + ofToString(now));
-
-    ofLog(OF_LOG_NOTICE, "nextBeatMS is " + ofToString(nextBeatMS));
+  
     receiver.setup(PORT);
+    gui.setup("videobeats");
+    gui.add(oscPort.set("OSC port: ", "12345"));
+
+    gui.add(syphonName.set("Syphon name: ", "videobeats"));
+    ofSetFrameRate(30);
 }
 
+uint64_t timeSinceEpochMillisec()
+{
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
 //--------------------------------------------------------------
 void ofApp::update()
 {
-    fingerMovie.update();
+    if (player.isPlaying())
+    {
+
+        player.update();
+        mainOutputSyphonServer.publishTexture(&player.getTexture());
+    }
+    uint64_t now = timeSinceEpochMillisec();
+    if (now >= nextBeatMS)
+    {
+        if (player.isPlaying())
+        {
+
+            float position = player.getPosition() * player.getDuration();
+
+            float nextposition = floor(position + 1.0);
+            skew = 1.0;
+            if (nextposition > position)
+            {
+                skew = 1.0 + (nextposition - position) / 5.0;
+            }
+            if (nextposition < position)
+            {
+                skew = 1.0 + (position - nextposition) / 5.0;
+            }
+
+            player.setSpeed((bpm / 60.0) * skew);
+            gui.setName("videobeats - " + ofToString(bpm) + "bpm");
+        }
+
+        nextBeatMS = now + (60.0 * 1000.0 / bpm);
+    }
+
     while (receiver.hasWaitingMessages())
     {
         // get the next message
@@ -41,92 +81,39 @@ void ofApp::update()
         {
             bpm = m.getArgAsFloat(0);
             nextBeatMS = m.getArgAsInt64(1);
-
-            ofLog(OF_LOG_NOTICE, "got osc bpm " + ofToString(bpm, 2) + "type" + m.getArgTypeName(0));
-            ofLog(OF_LOG_NOTICE, "got osc nextBeatMS " + ofToString(nextBeatMS, 2));
         }
     }
 }
 
-uint64_t timeSinceEpochMillisec() {
-  using namespace std::chrono;
-  return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+void ofApp::ChangedOSCPort(string & port)
+{
+    receiver.setup(ofToInt(port));
+}
+
+void ofApp::ChangedSyphonName(string &s)
+{
+    mainOutputSyphonServer.setName(s);
+    ofSetWindowTitle("videobeats - " + s);
 }
 
 //--------------------------------------------------------------
 void ofApp::draw()
 {
-
-    ofSetHexColor(0xFFFFFF);
-
-    fingerMovie.draw(20, 20);
-    tex = fingerMovie.getTexture();
-
-    ofDrawBitmapString("frame: " + ofToString(fingerMovie.getCurrentFrame()) + "/" + ofToString(fingerMovie.getTotalNumFrames()), 20, 380);
-    ofDrawBitmapString("duration: " + ofToString(fingerMovie.getPosition() * fingerMovie.getDuration(), 2) + "/" + ofToString(fingerMovie.getDuration(), 2), 20, 400);
-    ofDrawBitmapString("speed: " + ofToString(fingerMovie.getSpeed(), 2), 20, 420);
-    ofDrawBitmapString("bpm: " + ofToString(bpm, 2), 20, 440);
-    ofDrawBitmapString("skew: " + ofToString(skew, 2), 20, 480);
-
-    uint64_t now = timeSinceEpochMillisec();
-    if (now >= nextBeatMS)
+    if (ofGetFrameNum() % 6 == 0)
     {
-        ofLog(OF_LOG_NOTICE, "beat ! bpm is  " + ofToString(bpm));
+        ofClear(0, 0, 0, 1);
 
-        float position = fingerMovie.getPosition() * fingerMovie.getDuration();
-
-        float nextposition = floor(position + 1.0);
-        skew = 1.0;
-        if(nextposition > position){
-            skew = 1.0 + (nextposition-position)/5.0;
-        }
-        if(nextposition < position){
-            skew = 1.0 + (position-nextposition)/5.0;
-        }
-
-        if (nextposition > fingerMovie.getDuration())
+        if (player.isPlaying())
         {
-            nextposition - fingerMovie.getDuration();
+            player.draw(10, 10, width - 20, height - 20);
         }
-
-        // fingerMovie.setPosition(nextposition);
-
-        fingerMovie.setSpeed((bpm / 60.0)*skew);
-
-        nextBeatMS = now + (60.0 * 1000.0 / bpm);
     }
-
-    if (fingerMovie.getIsMovieDone())
-    {
-        ofSetHexColor(0xFF0000);
-        ofDrawBitmapString("end of movie", 20, 440);
-    }
-
-    mainOutputSyphonServer.publishTexture(&tex);
-}
-void ofApp::changeSpeedToBpm(int bpm)
-{
+    gui.draw();
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key)
 {
-    switch (key)
-    {
-    case 'f':
-        frameByframe = !frameByframe;
-        fingerMovie.setPaused(frameByframe);
-        break;
-    case OF_KEY_LEFT:
-        bpm -= 1;
-        break;
-    case OF_KEY_RIGHT:
-        bpm += 1;
-        break;
-    case '0':
-        fingerMovie.firstFrame();
-        break;
-    }
 }
 
 //--------------------------------------------------------------
@@ -137,41 +124,21 @@ void ofApp::keyReleased(int key)
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y)
 {
-    if (!frameByframe)
-    {
-        int width = ofGetWidth();
-        float pct = (float)x / (float)width;
-        float speed = (2 * pct - 1) * 5.0f;
-    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button)
 {
-    if (!frameByframe)
-    {
-        int width = ofGetWidth();
-        float pct = (float)x / (float)width;
-        fingerMovie.setPosition(pct);
-    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mousePressed(int x, int y, int button)
 {
-    if (!frameByframe)
-    {
-        fingerMovie.setPaused(true);
-    }
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseReleased(int x, int y, int button)
 {
-    if (!frameByframe)
-    {
-        fingerMovie.setPaused(false);
-    }
 }
 
 //--------------------------------------------------------------
@@ -197,4 +164,10 @@ void ofApp::gotMessage(ofMessage msg)
 //--------------------------------------------------------------
 void ofApp::dragEvent(ofDragInfo dragInfo)
 {
+    if (dragInfo.files.size() > 0)
+    {
+        player.load(dragInfo.files[0]);
+        player.setLoopState(OF_LOOP_NORMAL);
+        player.play();
+    }
 }

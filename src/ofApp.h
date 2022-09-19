@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "ofxSyphon.h"
 #include "ofxOsc.h"
+#include "ofxGui.h"
 
 #define PORT 12345
 
@@ -26,7 +27,8 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);		
 
-		void changeSpeedToBpm(int bpm);		
+		void ChangedOSCPort(string &port);
+		void ChangedSyphonName(string &s);
 		float bpm;
 		float skew;
 		uint64_t nextBeatMS;
@@ -34,11 +36,13 @@ class ofApp : public ofBaseApp{
 
 
 
-		ofVideoPlayer 		fingerMovie;
-		bool                frameByframe;
-
-		ofTexture tex;
+		ofVideoPlayer 		player;
 		
 		ofxSyphonServer mainOutputSyphonServer;
+		
+			ofxPanel gui;
+	ofParameter<std::string> oscPort;
+	ofParameter<std::string> syphonName;
+
 };
 
