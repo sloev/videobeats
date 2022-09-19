@@ -42,6 +42,7 @@ class ofApp : public ofBaseApp{
 		
 			ofxPanel gui;
 	ofParameter<std::string> oscPort;
+	ofParameter<bool> preview;
 	ofParameter<std::string> syphonName;
 
 };

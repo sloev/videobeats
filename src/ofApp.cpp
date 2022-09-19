@@ -21,12 +21,14 @@ void ofApp::setup()
     bpm = 60;
     int now = ofGetSystemTimeMillis();
     nextBeatMS = now + (60 * 1000 / bpm);
-  
+
     receiver.setup(PORT);
     gui.setup("videobeats");
     gui.add(oscPort.set("OSC port: ", "12345"));
 
     gui.add(syphonName.set("Syphon name: ", "videobeats"));
+    gui.add(preview.set("Preview ", true));
+
     ofSetFrameRate(30);
 }
 
@@ -42,7 +44,6 @@ void ofApp::update()
     {
 
         player.update();
-        mainOutputSyphonServer.publishTexture(&player.getTexture());
     }
     uint64_t now = timeSinceEpochMillisec();
     if (now >= nextBeatMS)
@@ -85,7 +86,7 @@ void ofApp::update()
     }
 }
 
-void ofApp::ChangedOSCPort(string & port)
+void ofApp::ChangedOSCPort(string &port)
 {
     receiver.setup(ofToInt(port));
 }
@@ -99,9 +100,10 @@ void ofApp::ChangedSyphonName(string &s)
 //--------------------------------------------------------------
 void ofApp::draw()
 {
-    if (ofGetFrameNum() % 6 == 0)
+    ofClear(0, 0, 0, 1);
+
+    if (preview.get())
     {
-        ofClear(0, 0, 0, 1);
 
         if (player.isPlaying())
         {
@@ -109,6 +111,7 @@ void ofApp::draw()
         }
     }
     gui.draw();
+    mainOutputSyphonServer.publishTexture(&player.getTexture());
 }
 
 //--------------------------------------------------------------
