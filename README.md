@@ -14,3 +14,9 @@ as described here: https://github.com/astellato/ofxSyphon/issues/50#issuecomment
 6. compile debug release
 7. copy Syphon.Framework from /addons/ofxSyphon/libs/Syphon/lib/osx/Syphon.framework to examples/video/videoPlayerExample/bin/videoPlayerExample_debug.app/Contents/Frameworks/Syphon.framework
 8. run debug start debugging
+
+## DEMO 
+
+video:
+
+[![Final video of fixing issues in your code in VS Code](https://img.youtube.com/vi/K9DTGbNg_cg/maxresdefault.jpg)](https://www.youtube.com/watch?v=K9DTGbNg_cg)
