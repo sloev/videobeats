@@ -65,7 +65,7 @@ void ofApp::update()
             }
 
             player.setSpeed((bpm / 60.0) * skew);
-            gui.setName("videobeats - " + ofToString(bpm) + "bpm");
+            gui.setName(ofToString(bpm) + "bpm");
         }
 
         nextBeatMS = now + (60.0 * 1000.0 / bpm);
@@ -78,11 +78,16 @@ void ofApp::update()
         receiver.getNextMessage(m);
 
         // check for mouse moved message
-        if (m.getAddress() == "/beatape")
+        if (m.getAddress() == "/beatape/next_beat_epoch_ms")
+        {
+            nextBeatMS = (uint64_t) m.getArgAsFloat(0);
+
+        }
+        if (m.getAddress() == "/beatape/bpm")
         {
             bpm = m.getArgAsFloat(0);
-            nextBeatMS = m.getArgAsInt64(1);
         }
+
     }
 }
 
